@@ -112,12 +112,12 @@ def reg(reg_form: Registor_form):
 def update_sensor(sensor: Sensor, username: str):
     s = jsonable_encoder(sensor)
     query = {"username": username}
-    res = db_home.update_one(query, {"$set": {"water_level": s["water_level"],
-                                              "gas": s["gas"],
-                                              "smoke": s["smoke"],
-                                              "flame": s["flame"],
-                                              "shake": s["shake"],
-                                              "wind": s["wind"]}})
+    db_home.update_one(query, {"$set": {"water_level": s["water_level"],
+                                        "gas": s["gas"],
+                                        "smoke": s["smoke"],
+                                        "flame": s["flame"],
+                                        "shake": s["shake"],
+                                        "wind": s["wind"]}})
     # return {"result": "Update success"}
     raise HTTPException(200, "Success change")
 
@@ -134,6 +134,7 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+
 @app.post("/check")
 def check_pass(login: Login):
     l = jsonable_encoder(login)
@@ -145,10 +146,8 @@ def check_pass(login: Login):
     if hash_input_pass == res["password"]:
         access_token = create_access_token(data={"sub": l["username"]})
         print(access_token)
-        return {"result": True,"access_token": access_token}
-    if hash_input_pass == res["password"] :
-        return {"result": True}
         # raise HTTPException(202, True)
+        return {"result": True, "access_token": access_token}
     else:
         return {"result": False}
         # raise HTTPException(400, False)
