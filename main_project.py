@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
 from pydantic import BaseModel
 from fastapi.encoders import jsonable_encoder
@@ -48,7 +48,8 @@ app = FastAPI()
 
 @app.get("/")
 def start():
-    return {"status": "OK"}
+    # return {"status": "OK"}
+    raise HTTPException(200, "Success")
 
 
 @app.post("/register")
@@ -57,7 +58,8 @@ def reg(reg_form: Registor_form):
     query = {"username": form["username"]}
     res = db_user.find(query, {"_id": 0})
     if len(list(res)) != 0:
-        return {"result": "This username has been used"}
+        # return {"result": "This username has been used"}
+        raise HTTPException(400, "This username has been used")
     else:
         init_user = {
             "username": form["username"],
@@ -91,7 +93,8 @@ def reg(reg_form: Registor_form):
         db_user.insert_one(init_user)
         db_home.insert_one(init_home)
         db_addr.insert_one(init_addr)
-        return {"result": "user has been added"}
+        # return {"result": "user has been added"}
+        raise HTTPException(201, "User has been register")
 
 
 @app.put("/update_sensor/{username}")
@@ -104,7 +107,8 @@ def update_sensor(sensor: Sensor, username: str):
                                               "flame": s["flame"],
                                               "shake": s["shake"],
                                               "wind": s["wind"]}})
-    return {"result": "Update success"}
+    # return {"result": "Update success"}
+    raise HTTPException(200, "Success change")
 
 
 @app.post("/check")
@@ -115,5 +119,7 @@ def check_pass(login:Login):
     hash_input_pass = hashlib.sha256(l["password"].encode()).hexdigest()
     if hash_input_pass == res["password"] :
         return {"result": True}
+        # raise HTTPException(202, True)
     else:
         return {"result": False}
+        # raise HTTPException(400, False)
