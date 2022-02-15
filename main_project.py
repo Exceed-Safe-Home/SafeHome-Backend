@@ -146,8 +146,6 @@ def check_pass(login: Login):
         access_token = create_access_token(data={"sub": l["username"]})
         print(access_token)
         return {"result": True,"access_token": access_token}
-    if hash_input_pass == res["password"] :
-        return {"result": True}
         # raise HTTPException(202, True)
     else:
         return {"result": False}
