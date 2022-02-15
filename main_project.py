@@ -112,7 +112,7 @@ def reg(reg_form: Registor_form):
 def update_sensor(sensor: Sensor, username: str):
     s = jsonable_encoder(sensor)
     query = {"username": username}
-    res = db_home.update_one(query, {"$set": {"water_level": s["water_level"],
+    db_home.update_one(query, {"$set": {"water_level": s["water_level"],
                                               "gas": s["gas"],
                                               "smoke": s["smoke"],
                                               "flame": s["flame"],
