@@ -2,7 +2,13 @@ from fastapi import FastAPI
 from pymongo import MongoClient
 from pydantic import BaseModel
 from fastapi.encoders import jsonable_encoder
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import hashlib
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+import secrets
+from typing import Optional
 
 
 class Registor_form(BaseModel):
@@ -34,7 +40,12 @@ class Sensor(BaseModel):
 
 class Login(BaseModel):
     username: str
-    password:str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
 client = MongoClient('mongodb://localhost', 27018)
@@ -98,22 +109,38 @@ def reg(reg_form: Registor_form):
 def update_sensor(sensor: Sensor, username: str):
     s = jsonable_encoder(sensor)
     query = {"username": username}
-    res = db_home.update_one(query, {"$set": {"water_level": s["water_level"],
-                                              "gas": s["gas"],
-                                              "smoke": s["smoke"],
-                                              "flame": s["flame"],
-                                              "shake": s["shake"],
-                                              "wind": s["wind"]}})
+    db_home.update_one(query, {"$set": {"water_level": s["water_level"],
+                                        "gas": s["gas"],
+                                        "smoke": s["smoke"],
+                                        "flame": s["flame"],
+                                        "shake": s["shake"],
+                                        "wind": s["wind"]}})
     return {"result": "Update success"}
 
 
+SECRET_KEY = secrets.token_hex(32)
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=30)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 @app.post("/check")
-def check_pass(login:Login):
+def check_pass(login: Login):
     l = jsonable_encoder(login)
-    query = {"username":l["username"]}
-    res = db_user.find_one(query,{"_id":0})
+    query = {"username": l["username"]}
+    res = db_user.find_one(query)
+    if res == None:
+        return {"result": "Invalid username or password"}
     hash_input_pass = hashlib.sha256(l["password"].encode()).hexdigest()
-    if hash_input_pass == res["password"] :
-        return {"result": True}
+    if hash_input_pass == res["password"]:
+        access_token = create_access_token(data={"sub": l["username"]})
+        print(access_token)
+        return {"result": True,"access_token": access_token}
     else:
         return {"result": False}
