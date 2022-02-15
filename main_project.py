@@ -5,7 +5,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import hashlib
-from jose import JWTError, jwt
+from jose import jwt
 from datetime import datetime, timedelta
 import secrets
 from typing import Optional
@@ -122,16 +122,15 @@ def update_sensor(sensor: Sensor, username: str):
     raise HTTPException(200, "Success change")
 
 
-SECRET_KEY = secrets.token_hex(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
-def create_access_token(data: dict):
+def create_access_token(data: dict, secret_key: str):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=30)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -144,7 +143,9 @@ def check_pass(login: Login):
         return {"result": "Invalid username or password"}
     hash_input_pass = hashlib.sha256(l["password"].encode()).hexdigest()
     if hash_input_pass == res["password"]:
-        access_token = create_access_token(data={"sub": l["username"]})
+        secret_key = secrets.token_hex(32)
+        print(secret_key)
+        access_token = create_access_token({"sub": l["username"]}, secret_key)
         print(access_token)
         # raise HTTPException(202, True)
         return {"result": True, "access_token": access_token}
