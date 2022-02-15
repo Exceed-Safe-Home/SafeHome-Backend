@@ -59,8 +59,7 @@ app = FastAPI()
 
 @app.get("/")
 def start():
-    # return {"status": "OK"}
-    raise HTTPException(200, "Success")
+    return {"status": "OK"}
 
 
 @app.post("/register")
