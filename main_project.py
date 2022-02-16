@@ -1,3 +1,4 @@
+from distutils.log import set_verbosity
 from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
 from pydantic import BaseModel
@@ -45,7 +46,6 @@ class Login(BaseModel):
 
 class Token(BaseModel):
     access_token: str
-    token_type: str
 
 
 client = MongoClient('mongodb://localhost', 27018)
@@ -108,7 +108,7 @@ def reg(reg_form: Registor_form):
 
 
 @app.put("/update_sensor/{username}")
-def update_sensor(sensor: Sensor, username: str):
+def update_sensor(sensor: Sensor, username: str,):
     s = jsonable_encoder(sensor)
     query = {"username": username}
     db_home.update_one(query, {"$set": {"water_level": s["water_level"],
@@ -120,7 +120,7 @@ def update_sensor(sensor: Sensor, username: str):
     # return {"result": "Update success"}
     raise HTTPException(200, "Success change")
 
-
+SECRET_KEY = "d33c5f6a1d781b26efa06929e263dfe775a6c0c7bfca20dba36b4db26bbff00d"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -142,12 +142,22 @@ def check_pass(login: Login):
         return {"result": "Invalid username or password"}
     hash_input_pass = hashlib.sha256(l["password"].encode()).hexdigest()
     if hash_input_pass == res["password"]:
-        secret_key = secrets.token_hex(32)
-        print(secret_key)
-        access_token = create_access_token({"sub": l["username"]}, secret_key)
+        access_token = create_access_token({"sub": l["username"]}, SECRET_KEY)
         print(access_token)
         # raise HTTPException(202, True)
         return {"result": True, "access_token": access_token}
     else:
         return {"result": False}
         # raise HTTPException(400, False)
+
+
+@app.get("/get_sensor")
+def get_sensor(token:Token):
+    t = jsonable_encoder(token)
+    access_token = t["access_token"]
+    try:
+        token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256']) #ถ้าdecodeไม่ผ่าน จะเกิดinternal server errorทันที ทำให้ทำคำสั่งต่อไปไม่ได้
+        print(token_decoded)
+        return {"result": "Decode success"}
+    except:
+        return {"result": "Can't decode"}
