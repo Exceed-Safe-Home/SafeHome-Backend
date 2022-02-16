@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import hashlib
-from jose import jwt
+from jose import jwt, JWTError
 from datetime import datetime, timedelta
 import secrets
 from typing import Optional
@@ -37,16 +37,6 @@ class Sensor(BaseModel):
     flame: float
     shake: float
     wind: float
-
-
-class Update_Sensor(BaseModel):
-    water_level: float
-    gas: float
-    smoke: float
-    flame: float
-    shake: float
-    wind: float
-    access_token: str
 
 
 class Login(BaseModel):
@@ -121,12 +111,12 @@ def reg(reg_form: Registor_form):
         raise HTTPException(201, "User has been register")
 
 
-@app.put("/update_sensor")
-def update_sensor(sensor: Update_Sensor):
+@app.put("/update_sensor/{username}")
+def update_sensor(sensor: Sensor,username: str):
     s = jsonable_encoder(sensor)
-    access_token = s["access_token"]
-    token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256'])
-    query = {"username": token_decoded["sub"]}
+    # access_token = s["access_token"]
+    # token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256'])
+    query = {"username": username}
     db_home.update_one(query, {"$set": {"water_level": s["water_level"],
                                         "gas": s["gas"],
                                         "smoke": s["smoke"],
@@ -137,6 +127,9 @@ def update_sensor(sensor: Update_Sensor):
     raise HTTPException(200, "Success change")
 
 
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
 def create_access_token(data: dict, secret_key: str):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=30)
@@ -144,6 +137,30 @@ def create_access_token(data: dict, secret_key: str):
     encoded_jwt = jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
     return encoded_jwt
 
+# async def get_current_user(token: str = Depends(oauth2_scheme)):
+#     credentials_exception = HTTPException(
+#         status_code=status.HTTP_401_UNAUTHORIZED,
+#         detail="Could not validate credentials",
+#         headers={"WWW-Authenticate": "Bearer"},
+#     )
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         username: str = payload.get("sub")
+#         if username is None:
+#             raise credentials_exception
+#         token_data = TokenData(username=username)
+#     except JWTError:
+#         raise credentials_exception
+#     user = get_user(fake_users_db, username=token_data.username)
+#     if user is None:
+#         raise credentials_exception
+#     return user
+
+
+# async def get_current_active_user(current_user: User = Depends(get_current_user)):
+#     if current_user.disabled:
+#         raise HTTPException(status_code=400, detail="Inactive user")
+#     return current_user
 
 @app.post("/check")
 def check_pass(login: Login):
@@ -169,7 +186,8 @@ def get_sensor(token: Token):
     access_token = t["access_token"]
     try:
         # ถ้าdecodeไม่ผ่าน จะเกิดinternal server errorทันที ทำให้ทำคำสั่งต่อไปไม่ได้
-        token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256'])
+        token_decoded = jwt.decode(
+            access_token, SECRET_KEY, algorithms=['HS256'])
         print(token_decoded)
         query = {"username": token_decoded["sub"]}
         res = db_home.find_one(query, {"_id": 0})
