@@ -39,6 +39,16 @@ class Sensor(BaseModel):
     wind: float
 
 
+class Update_Sensor(BaseModel):
+    water_level: float
+    gas: float
+    smoke: float
+    flame: float
+    shake: float
+    wind: float
+    access_token: str
+
+
 class Login(BaseModel):
     username: str
     password: str
@@ -55,6 +65,10 @@ db_home = db["Home"]
 db_user = db["User"]
 
 app = FastAPI()
+
+SECRET_KEY = "d33c5f6a1d781b26efa06929e263dfe775a6c0c7bfca20dba36b4db26bbff00d"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 @app.get("/")
@@ -107,10 +121,12 @@ def reg(reg_form: Registor_form):
         raise HTTPException(201, "User has been register")
 
 
-@app.put("/update_sensor/{username}")
-def update_sensor(sensor: Sensor, username: str,):
+@app.put("/update_sensor")
+def update_sensor(sensor: Update_Sensor):
     s = jsonable_encoder(sensor)
-    query = {"username": username}
+    access_token = s["access_token"]
+    token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256'])
+    query = {"username": token_decoded["sub"]}
     db_home.update_one(query, {"$set": {"water_level": s["water_level"],
                                         "gas": s["gas"],
                                         "smoke": s["smoke"],
@@ -119,10 +135,6 @@ def update_sensor(sensor: Sensor, username: str,):
                                         "wind": s["wind"]}})
     # return {"result": "Update success"}
     raise HTTPException(200, "Success change")
-
-SECRET_KEY = "d33c5f6a1d781b26efa06929e263dfe775a6c0c7bfca20dba36b4db26bbff00d"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 def create_access_token(data: dict, secret_key: str):
@@ -140,8 +152,8 @@ def check_pass(login: Login):
     res = db_user.find_one(query)
     if res == None:
         return {"result": "Invalid username or password"}
-    hash_input_pass = hashlib.sha256(l["password"].encode()).hexdigest()
-    if hash_input_pass == res["password"]:
+    # hash_input_pass = hashlib.sha256(l["password"].encode()).hexdigest()
+    if l["password"] == res["password"]:
         access_token = create_access_token({"sub": l["username"]}, SECRET_KEY)
         print(access_token)
         # raise HTTPException(202, True)
@@ -152,12 +164,15 @@ def check_pass(login: Login):
 
 
 @app.get("/get_sensor")
-def get_sensor(token:Token):
+def get_sensor(token: Token):
     t = jsonable_encoder(token)
     access_token = t["access_token"]
     try:
-        token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256']) #ถ้าdecodeไม่ผ่าน จะเกิดinternal server errorทันที ทำให้ทำคำสั่งต่อไปไม่ได้
+        # ถ้าdecodeไม่ผ่าน จะเกิดinternal server errorทันที ทำให้ทำคำสั่งต่อไปไม่ได้
+        token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256'])
         print(token_decoded)
-        return {"result": "Decode success"}
+        query = {"username": token_decoded["sub"]}
+        res = db_home.find_one(query, {"_id": 0})
+        return {"result": res}
     except:
         return {"result": "Can't decode"}
