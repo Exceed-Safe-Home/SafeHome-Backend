@@ -239,3 +239,9 @@ def get_sensor(current_user: User = Depends(get_current_user)):
     query = {"username": current_user.username}
     res = db_home.find_one(query, {"_id": 0})
     return {"result": res}
+
+@app.get("/get_address")
+def get_sensor(current_user: User = Depends(get_current_user)):
+    query = {"username": current_user.username}
+    res = db_addr.find_one(query, {"_id": 0})
+    return {"result": res}
