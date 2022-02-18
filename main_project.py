@@ -1,15 +1,10 @@
-from cgi import print_directory
-from distutils.log import set_verbosity
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pymongo import MongoClient
 from pydantic import BaseModel
-from fastapi.encoders import jsonable_encoder
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-import hashlib
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
-import secrets
 from typing import Optional
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +16,7 @@ origins = [
     "http://localhost:8080",
     "*"
 ]
+
 
 
 class Registor_form(BaseModel):
