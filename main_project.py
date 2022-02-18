@@ -1,3 +1,4 @@
+from cgi import print_directory
 from distutils.log import set_verbosity
 from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
@@ -11,6 +12,16 @@ from datetime import datetime, timedelta
 import secrets
 from typing import Optional
 from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
+
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+    "*"
+]
+
 
 class Registor_form(BaseModel):
     username: str
@@ -36,7 +47,6 @@ class Sensor(BaseModel):
     smoke: float
     flame: float
     shake: float
-    wind: float
 
 
 class Token(BaseModel):
@@ -52,9 +62,9 @@ class User(BaseModel):
     name: str
 
 
-
 class UserInDB(User):
     hashed_password: str
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -66,12 +76,22 @@ db_user = db["User"]
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 SECRET_KEY = "d33c5f6a1d781b26efa06929e263dfe775a6c0c7bfca20dba36b4db26bbff00d"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+
 def get_password_hash(password):
     return pwd_context.hash(password)
+
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -105,7 +125,6 @@ def reg(reg_form: Registor_form):
             "smoke": 0,
             "flame": 0,
             "shake": 0,
-            "wind": 0
         }
         init_addr = {
             "username": form["username"],
@@ -163,24 +182,25 @@ def get_user(dbx, username: str):
         print("check")
         print(dbx[username])
         return UserInDB(**user_dict)
-    
 
-def get_user_from_db() :
-    result = db_user.find({},{"_id":0})
-    #print(result)
+
+def get_user_from_db():
+    result = db_user.find({}, {"_id": 0})
+    # print(result)
     dic = {}
     for r in result:
-        dic[ r['username'] ] = r
+        dic[r['username']] = r
     return dic
+
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     # print(db_user)
-    
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
-    ) 
+    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
@@ -189,13 +209,13 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    
+
     db_userxxx = get_user_from_db()
-    
+
     # for i in db_userxxx :
     #     print(i)
     # print(token_data.username)
-    
+
     user = get_user(db_userxxx, username=token_data.username)
     if user is None:
         raise credentials_exception
@@ -207,6 +227,7 @@ def get_current_active_user(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
+
 def authenticate_user(fake_db, username: str, password: str):
     user = get_user(fake_db, username)
     if not user:
@@ -216,11 +237,11 @@ def authenticate_user(fake_db, username: str, password: str):
     return user
 
 
-
-@app.post("/token", response_model=Token)
+@app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     users_db = get_user_from_db()
     user = authenticate_user(users_db, form_data.username, form_data.password)
+    print(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -229,8 +250,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
+        data={"sub": user.username}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -239,6 +259,7 @@ def get_sensor(current_user: User = Depends(get_current_user)):
     query = {"username": current_user.username}
     res = db_home.find_one(query, {"_id": 0})
     return {"result": res}
+
 
 @app.get("/get_address")
 def get_sensor(current_user: User = Depends(get_current_user)):
