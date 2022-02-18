@@ -18,7 +18,6 @@ origins = [
 ]
 
 
-
 class Registor_form(BaseModel):
     username: str
     password: str
@@ -38,11 +37,11 @@ class Registor_form(BaseModel):
 
 
 class Sensor(BaseModel):
-    water_level: float
-    gas: float
-    smoke: float
-    flame: float
-    shake: float
+    water_level: int
+    gas: int
+    smoke: int
+    flame: int
+    shake: int
 
 
 class Token(BaseModel):
