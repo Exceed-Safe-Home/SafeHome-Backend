@@ -1,16 +1,13 @@
-from distutils.log import set_verbosity
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pymongo import MongoClient
 from pydantic import BaseModel
-from fastapi.encoders import jsonable_encoder
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-import hashlib
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
-import secrets
 from typing import Optional
 from passlib.context import CryptContext
+
 
 class Registor_form(BaseModel):
     username: str
@@ -52,9 +49,9 @@ class User(BaseModel):
     name: str
 
 
-
 class UserInDB(User):
     hashed_password: str
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

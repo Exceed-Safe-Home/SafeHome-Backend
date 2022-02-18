@@ -3,3 +3,5 @@ pymongo
 pydantic
 hashlib
 uvicorn
+jose
+passlib
