@@ -151,8 +151,7 @@ def update_sensor(sensor: Sensor, username: str):
                                         "gas": s["gas"],
                                         "smoke": s["smoke"],
                                         "flame": s["flame"],
-                                        "shake": s["shake"],
-                                        "wind": s["wind"]}})
+                                        "shake": s["shake"]}})
     # return {"result": "Update success"}
     raise HTTPException(200, "Success change")
 
