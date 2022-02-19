@@ -142,10 +142,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
     db_userxxx = get_user_from_db()
 
-    # for i in db_userxxx :
-    #     print(i)
-    # print(token_data.username)
-
     user = get_user(db_userxxx, username=token_data.username)
     if user is None:
         raise credentials_exception
@@ -177,7 +173,7 @@ def reg(reg_form: Registor_form):
     form = jsonable_encoder(reg_form)
     query = {"username": form["username"]}
     res = db_user.find(query, {"_id": 0})
-    res_s  = db_user.find({"serial":form["serial"]})
+    res_s = db_user.find({"serial": form["serial"]})
     if len(list(res)) != 0:
         # return {"result": "This username has been used"}
         raise HTTPException(400, "This username has been used")
@@ -234,10 +230,11 @@ def update_sensor(sensor: Sensor, serial: str):
 
 
 @app.get("/hard_get/{serial}")
-def hard_get(serial:str):
+def hard_get(serial: str):
     query = {"serial": serial}
-    res = db_home.find_one(query,{"_id":0})
+    res = db_home.find_one(query, {"_id": 0})
     return {"result": res}
+
 
 @app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
