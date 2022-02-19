@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -26,14 +27,13 @@ class Registor_form(BaseModel):
     telephone: str
     house_no: str
     village_no: str
-    alley: str
     lane: str
     road: str
     sub_district: str
-    sub_area: str
     district: str
     province: str
     postal_code: str
+    serial: str
 
 
 class Sensor(BaseModel):
@@ -90,70 +90,6 @@ def get_password_hash(password):
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
-
-
-@app.get("/")
-def start():
-    return {"status": "OK"}
-
-
-@app.post("/register")
-def reg(reg_form: Registor_form):
-    form = jsonable_encoder(reg_form)
-    query = {"username": form["username"]}
-    res = db_user.find(query, {"_id": 0})
-    if len(list(res)) != 0:
-        # return {"result": "This username has been used"}
-        raise HTTPException(400, "This username has been used")
-    else:
-        init_user = {
-            "username": form["username"],
-            "hashed_password": get_password_hash(form["password"]),
-            "name": form["name"],
-            "surname": form["surname"],
-            "telephone": form["telephone"]
-        }
-        init_home = {
-            "username": form["username"],
-            "water_level": 0,
-            "gas": 0,
-            "smoke": 0,
-            "flame": 0,
-            "shake": 0,
-        }
-        init_addr = {
-            "username": form["username"],
-            "house_no": form["house_no"],
-            "village_no": form["village_no"],
-            "alley": form["alley"],
-            "lane": form["lane"],
-            "road": form["road"],
-            "sub_district": form["sub_district"],
-            "sub_area": form["sub_area"],
-            "district": form["district"],
-            "province": form["province"],
-            "postal_code": form["postal_code"]
-        }
-        db_user.insert_one(init_user)
-        db_home.insert_one(init_home)
-        db_addr.insert_one(init_addr)
-        # return {"result": "user has been added"}
-        raise HTTPException(201, "User has been register")
-
-
-@app.put("/update_sensor/{username}")
-def update_sensor(sensor: Sensor, username: str):
-    s = jsonable_encoder(sensor)
-    # access_token = s["access_token"]
-    # token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256'])
-    query = {"username": username}
-    db_home.update_one(query, {"$set": {"water_level": s["water_level"],
-                                        "gas": s["gas"],
-                                        "smoke": s["smoke"],
-                                        "flame": s["flame"],
-                                        "shake": s["shake"]}})
-    # return {"result": "Update success"}
-    raise HTTPException(200, "Success change")
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -230,6 +166,78 @@ def authenticate_user(fake_db, username: str, password: str):
         return False
     return user
 
+
+@app.get("/")
+def start():
+    return {"status": "OK"}
+
+
+@app.post("/register")
+def reg(reg_form: Registor_form):
+    form = jsonable_encoder(reg_form)
+    query = {"username": form["username"]}
+    res = db_user.find(query, {"_id": 0})
+    res_s  = db_user.find({"serial":form["serial"]})
+    if len(list(res)) != 0:
+        # return {"result": "This username has been used"}
+        raise HTTPException(400, "This username has been used")
+    elif len(list(res_s)) != 0:
+        raise HTTPException(400, "This serial has been used")
+    else:
+        init_user = {
+            "username": form["username"],
+            "hashed_password": get_password_hash(form["password"]),
+            "name": form["name"],
+            "surname": form["surname"],
+            "telephone": form["telephone"]
+        }
+        init_home = {
+            "username": form["username"],
+            "serial": form["serial"],
+            "water_level": 0,
+            "gas": 0,
+            "smoke": 0,
+            "flame": 0,
+            "shake": 0,
+        }
+        init_addr = {
+            "username": form["username"],
+            "house_no": form["house_no"],
+            "village_no": form["village_no"],
+            "lane": form["lane"],
+            "road": form["road"],
+            "sub_district": form["sub_district"],
+            "district": form["district"],
+            "province": form["province"],
+            "postal_code": form["postal_code"]
+        }
+        db_user.insert_one(init_user)
+        db_home.insert_one(init_home)
+        db_addr.insert_one(init_addr)
+        # return {"result": "user has been added"}
+        raise HTTPException(201, "User has been register")
+
+
+@app.put("/update_sensor/{serial}")
+def update_sensor(sensor: Sensor, serial: str):
+    s = jsonable_encoder(sensor)
+    # access_token = s["access_token"]
+    # token_decoded = jwt.decode(access_token, SECRET_KEY, algorithms=['HS256'])
+    query = {"serial": serial}
+    db_home.update_one(query, {"$set": {"water_level": s["water_level"],
+                                        "gas": s["gas"],
+                                        "smoke": s["smoke"],
+                                        "flame": s["flame"],
+                                        "shake": s["shake"]}})
+    # return {"result": "Update success"}
+    raise HTTPException(200, "Success change")
+
+
+@app.get("/hard_get/{serial}")
+def hard_get(serial:str):
+    query = {"serial": serial}
+    res = db_home.find_one(query,{"_id":0})
+    return {"result": res}
 
 @app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
