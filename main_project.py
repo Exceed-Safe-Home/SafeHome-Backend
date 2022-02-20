@@ -1,4 +1,5 @@
 from asyncio.windows_events import NULL
+from cgi import print_environ
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -109,8 +110,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 def get_user(dbx, username: str):
     if username in dbx:
         user_dict = dbx[username]
-        print("check")
-        print(dbx[username])
+        # print("check")
+        # print(dbx[username])
         return UserInDB(**user_dict)
 
 
@@ -172,20 +173,20 @@ def start():
 def reg(reg_form: Registor_form):
     form = jsonable_encoder(reg_form)
     query = {"username": form["username"]}
-    res = db_user.find(query, {"_id": 0})
-    res_s = db_user.find({"serial": form["serial"]})
-    if len(list(res)) != 0:
+    res = db_user.find_one(query, {"_id": 0})
+    res_s = db_home.find_one({"serial": form["serial"]},{"_id": 0})
+    if res != None:
         # return {"result": "This username has been used"}
         raise HTTPException(400, "This username has been used")
-    elif len(list(res_s)) != 0:
+    elif res_s != None:
         raise HTTPException(400, "This serial has been used")
     else:
         init_user = {
-            "username": form["username"],
-            "hashed_password": get_password_hash(form["password"]),
-            "name": form["name"],
-            "surname": form["surname"],
-            "telephone": form["telephone"]
+        "username": form["username"],
+        "hashed_password": get_password_hash(form["password"]),
+        "name": form["name"],
+        "surname": form["surname"],
+        "telephone": form["telephone"]
         }
         init_home = {
             "username": form["username"],
@@ -233,14 +234,14 @@ def update_sensor(sensor: Sensor, serial: str):
 def hard_get(serial: str):
     query = {"serial": serial}
     res = db_home.find_one(query, {"_id": 0})
-    return {"result": res}
+    return res
 
 
 @app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     users_db = get_user_from_db()
     user = authenticate_user(users_db, form_data.username, form_data.password)
-    print(form_data.username, form_data.password)
+    # print(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
